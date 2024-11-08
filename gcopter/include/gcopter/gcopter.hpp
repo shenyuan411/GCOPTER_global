@@ -293,6 +293,7 @@ namespace gcopter
             return;
         }
 
+		// make the max[x,0] derivative, use the mu factor to smoothed, so can get the first derivative df
         static inline bool smoothedL1(const double &x,
                                       const double &mu,
                                       double &f,
@@ -327,8 +328,8 @@ namespace gcopter
                                                    const Eigen::MatrixX3d &coeffs,
                                                    const Eigen::VectorXi &hIdx,
                                                    const PolyhedraH &hPolys,
-                                                   const double &smoothFactor,
-                                                   const int &integralResolution,
+                                                   const double &smoothFactor,// Barrier Function smooth factor
+                                                   const int &integralResolution,// K discrete from one piece
                                                    const Eigen::VectorXd &magnitudeBounds,
                                                    const Eigen::VectorXd &penaltyWeights,
                                                    flatness::FlatnessMap &flatMap,
@@ -374,7 +375,7 @@ namespace gcopter
             for (int i = 0; i < pieceNum; i++)
             {
                 const Eigen::Matrix<double, 6, 3> &c = coeffs.block<6, 3>(i * 6, 0);
-                step = T(i) * integralFrac;
+                step = T(i) * integralFrac;// every time step after discrete
                 for (int j = 0; j <= integralResolution; j++)
                 {
                     s1 = j * step;
@@ -473,7 +474,7 @@ namespace gcopter
                                             const Eigen::VectorXd &x,
                                             Eigen::VectorXd &g)
         {
-            GCOPTER_PolytopeSFC &obj = *(GCOPTER_PolytopeSFC *)ptr;
+            GCOPTER_PolytopeSFC &obj = *(GCOPTER_PolytopeSFC *)ptr;// 类型转换，然后解引用指针，变成引用 obj is the reference of the first input param
             const int dimTau = obj.temporalDim;
             const int dimXi = obj.spatialDim;
             const double weightT = obj.rho;
@@ -487,25 +488,25 @@ namespace gcopter
 
             double cost;
             obj.minco.setParameters(obj.points, obj.times);
-            obj.minco.getEnergy(cost);
-            obj.minco.getEnergyPartialGradByCoeffs(obj.partialGradByCoeffs);
-            obj.minco.getEnergyPartialGradByTimes(obj.partialGradByTimes);
+            obj.minco.getEnergy(cost);// get smoo_cost
+            obj.minco.getEnergyPartialGradByCoeffs(obj.partialGradByCoeffs);// fisrt gradC from energy
+            obj.minco.getEnergyPartialGradByTimes(obj.partialGradByTimes);// first gradT from energy
 
             attachPenaltyFunctional(obj.times, obj.minco.getCoeffs(),
                                     obj.hPolyIdx, obj.hPolytopes,
                                     obj.smoothEps, obj.integralRes,
                                     obj.magnitudeBd, obj.penaltyWt, obj.flatmap,
-                                    cost, obj.partialGradByTimes, obj.partialGradByCoeffs);
+                                    cost, obj.partialGradByTimes, obj.partialGradByCoeffs);// add gradT and gradC
 
             obj.minco.propogateGrad(obj.partialGradByCoeffs, obj.partialGradByTimes,
-                                    obj.gradByPoints, obj.gradByTimes);
+                                    obj.gradByPoints, obj.gradByTimes);// from gradT & gradC to gradT & gradP 
 
             cost += weightT * obj.times.sum();
             obj.gradByTimes.array() += weightT;
 
-            backwardGradT(tau, obj.gradByTimes, gradTau);
-            backwardGradP(xi, obj.vPolyIdx, obj.vPolytopes, obj.gradByPoints, gradXi);
-            normRetrictionLayer(xi, obj.vPolyIdx, obj.vPolytopes, cost, gradXi);
+            backwardGradT(tau, obj.gradByTimes, gradTau);// gradT back to gradTau(a part of g)
+            backwardGradP(xi, obj.vPolyIdx, obj.vPolytopes, obj.gradByPoints, gradXi);// gradP back to gradXi(another part of g)
+            normRetrictionLayer(xi, obj.vPolyIdx, obj.vPolytopes, cost, gradXi);// restrict the magnitudes of xi to range of 0 to 1
 
             return cost;
         }
@@ -814,8 +815,8 @@ namespace gcopter
             Eigen::Map<Eigen::VectorXd> xi(x.data() + temporalDim, spatialDim);
 
             setInitial(shortPath, allocSpeed, pieceIdx, points, times);
-            backwardT(times, tau);
-            backwardP(points, vPolyIdx, vPolytopes, xi);
+            backwardT(times, tau);// RealT to Virtual tau
+            backwardP(points, vPolyIdx, vPolytopes, xi);// RealP to ksi
 
             double minCostFunctional;
             lbfgs_params.mem_size = 256;
@@ -824,8 +825,8 @@ namespace gcopter
             lbfgs_params.g_epsilon = 0.0;
             lbfgs_params.delta = relCostTol;
 
-            int ret = lbfgs::lbfgs_optimize(x,
-                                            minCostFunctional,
+            int ret = lbfgs::lbfgs_optimize(x,// tau and ksi input
+                                            minCostFunctional, // cost
                                             &GCOPTER_PolytopeSFC::costFunctional,
                                             nullptr,
                                             nullptr,
@@ -834,8 +835,8 @@ namespace gcopter
 
             if (ret >= 0)
             {
-                forwardT(tau, times);
-                forwardP(xi, vPolyIdx, vPolytopes, points);
+                forwardT(tau, times);// Vertual tau to RealT
+                forwardP(xi, vPolyIdx, vPolytopes, points);// ksi to RealP
                 minco.setParameters(points, times);
                 minco.getTrajectory(traj);
             }

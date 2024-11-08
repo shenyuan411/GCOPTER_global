@@ -1,4 +1,5 @@
-MapTopic:                   '/voxel_map'
+# MapTopic:                   '/voxel_map'
+MapTopic:                   '/map_generator/global_cloud'
 
 TargetTopic:                '/move_base_simple/goal'
 

@@ -11,7 +11,7 @@
 
   <node pkg="mockamap" type="mockamap_node" name="mockamap_node" output="screen">
   <param name="seed" type="int" value="1024"/>
-  <param name="update_freq" type="double" value="1.0"/>
+  <param name="update_freq" type="double" value="1"/>
   <param name="resolution" type="double" value="0.25"/>
   <param name="x_length" type="int" value="50"/>
   <param name="y_length" type="int" value="50"/>
@@ -27,5 +27,7 @@
   <node pkg="gcopter" type="global_planning" name="global_planning_node" output="screen">
   <rosparam file="$(find gcopter)/config/global_planning.yaml" command="load" />
   </node>
+
+  <node pkg="tf" type="static_transform_publisher" name="world_odom_publisher_GCOPTER" args="0 0 0 0 0 0 world odom 100"/>
 
 </launch>
