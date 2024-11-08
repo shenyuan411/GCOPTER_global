@@ -40,10 +40,10 @@ struct Config
     double parasDrag;
     double speedEps;
     double weightT;
-    std::vector<double> chiVec;
+    std::vector<double> chiVec;// penaity of the p v w attitude thrust
     double smoothingEps;
-    int integralIntervs;
-    double relCostTol;
+    int integralIntervs;// integration intervall
+    double relCostTol;// optimize stop condition
 
     Config(const ros::NodeHandle &nh_priv)
     {
@@ -114,10 +114,14 @@ public:
 
     inline void mapCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg)
     {
-        if (!mapInitialized)
+		if (!mapInitialized)
+		// if (1)// change to this line to make the map update dynamically
         {
+			voxelMap.resetVoxels();// add this line to make the map update dynamically
             size_t cur = 0;
+			// std::cout << "get into the mapCallBack" << std::endl;
             const size_t total = msg->data.size() / msg->point_step;
+			// std::cout << "in mapCallBack: total: " << total << std::endl;
             float *fdata = (float *)(&msg->data[0]);
             for (size_t i = 0; i < total; i++)
             {
@@ -144,7 +148,7 @@ public:
     {
         if (startGoal.size() == 2)
         {
-            std::vector<Eigen::Vector3d> route;
+            std::vector<Eigen::Vector3d> route;// 储存初步的路径
             sfc_gen::planPath<voxel_map::VoxelMap>(startGoal[0],
                                                    startGoal[1],
                                                    voxelMap.getOrigin(),
@@ -153,7 +157,8 @@ public:
                                                    route);
             std::vector<Eigen::MatrixX4d> hPolys;
             std::vector<Eigen::Vector3d> pc;
-            voxelMap.getSurf(pc);
+            voxelMap.getSurf(pc);// get the surf point cloud of the voxelMap
+			std::cout << "in plan function:  pc.size(): " <<  pc.size() << std::endl;
 
             sfc_gen::convexCover(route,
                                  pc,
@@ -161,14 +166,16 @@ public:
                                  voxelMap.getCorner(),
                                  7.0,
                                  3.0,
-                                 hPolys);
-            sfc_gen::shortCut(hPolys);
+                                 hPolys);// 凸包的构成平面相关信息
+			std::cout << "in plan function:  hPolys.size(): " <<  hPolys.size() << std::endl;
+            sfc_gen::shortCut(hPolys);// 凸包简化
+			std::cout << "in plan function: after shortCut hPolys.size(): " <<  hPolys.size() << std::endl;
 
             if (route.size() > 1)
             {
                 visualizer.visualizePolytope(hPolys);
 
-                Eigen::Matrix3d iniState;
+                Eigen::Matrix3d iniState;// p v a
                 Eigen::Matrix3d finState;
                 iniState << route.front(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero();
                 finState << route.back(), Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero();
@@ -207,8 +214,8 @@ public:
                                    iniState, finState,
                                    hPolys, INFINITY,
                                    config.smoothingEps,
-                                   quadratureRes,
-                                   magnitudeBounds,
+                                   quadratureRes,// integration interval
+                                   magnitudeBounds,// conversions
                                    penaltyWeights,
                                    physicalParams))
                 {
@@ -283,7 +290,7 @@ public:
                                 traj.getAcc(delta),
                                 traj.getJer(delta),
                                 0.0, 0.0,
-                                thr, quat, omg);
+                                thr, quat, omg);// 利用微分平坦中的模型推导，把生成轨迹的参数变为四旋翼的参数
                 double speed = traj.getVel(delta).norm();
                 double bodyratemag = omg.norm();
                 double tiltangle = acos(1.0 - 2.0 * (quat(1) * quat(1) + quat(2) * quat(2)));

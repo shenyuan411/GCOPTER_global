@@ -135,7 +135,7 @@ namespace sfc_gen
         Eigen::MatrixX4d hp, gap;
         Eigen::Vector3d a, b = path[0];
         std::vector<Eigen::Vector3d> valid_pc;
-        std::vector<Eigen::Vector3d> bs;
+        std::vector<Eigen::Vector3d> bs;// the rrt point after the progress cut
         valid_pc.reserve(points.size());
         for (int i = 1; i < n;)
         {
@@ -151,7 +151,7 @@ namespace sfc_gen
             }
             bs.emplace_back(b);
 
-            bd(0, 3) = -std::min(std::max(a(0), b(0)) + range, highCorner(0));
+            bd(0, 3) = -std::min(std::max(a(0), b(0)) + range, highCorner(0));// bd is show in the pictrue of lpy, low Corner and the high Corner is the start and the final goal
             bd(1, 3) = +std::max(std::min(a(0), b(0)) - range, lowCorner(0));
             bd(2, 3) = -std::min(std::max(a(1), b(1)) + range, highCorner(1));
             bd(3, 3) = +std::max(std::min(a(1), b(1)) - range, lowCorner(1));
@@ -163,7 +163,7 @@ namespace sfc_gen
             {
                 if ((bd.leftCols<3>() * p + bd.rightCols<1>()).maxCoeff() < 0.0)
                 {
-                    valid_pc.emplace_back(p);
+                    valid_pc.emplace_back(p);// get the pc on the outside of the bd
                 }
             }
             Eigen::Map<const Eigen::Matrix<double, 3, -1, Eigen::ColMajor>> pc(valid_pc[0].data(), 3, valid_pc.size());

@@ -112,7 +112,7 @@ namespace voxel_map
             }
         }
 
-        inline void dilate(const int &r)
+        inline void dilate(const int &r)// 膨胀
         {
             if (r <= 0)
             {
@@ -125,6 +125,7 @@ namespace voxel_map
                 cvec.reserve(voxNum);
                 int i, j, k, idx;
                 bool check;
+				// the first loop is to mark the voxels which is occupied(value == 1)
                 for (int x = 0; x <= bounds(0); x++)
                 {
                     for (int y = 0; y <= bounds(1); y += step(1))
@@ -133,6 +134,7 @@ namespace voxel_map
                         {
                             if (voxels[x + y + z] == Occupied)
                             {
+								// std::cout << "get into the dilate fuct first for loop!" << std::endl;
                                 VOXEL_DILATER(i, j, k,
                                               x, y, z,
                                               step(1), step(2),
@@ -143,9 +145,10 @@ namespace voxel_map
                     }
                 }
 
+				// the second loop is to get the occupied voxels then dilate r times (value = 2 if == 0)
                 for (int loop = 1; loop < r; loop++)
                 {
-                    std::swap(cvec, lvec);
+                    std::swap(cvec, lvec);// lvec is the idx of occupied voxels, the cvec is the surf of the dilated obstacles
                     for (const Eigen::Vector3i &id : lvec)
                     {
                         VOXEL_DILATER(i, j, k,
@@ -158,6 +161,7 @@ namespace voxel_map
                 }
 
                 surf = cvec;
+				// cvec.clear();
             }
         }
 
@@ -181,7 +185,7 @@ namespace voxel_map
         inline void getSurf(std::vector<Eigen::Vector3d> &points) const
         {
             points.reserve(surf.size());
-            for (const Eigen::Vector3i &id : surf)
+            for (const Eigen::Vector3i &id : surf)// surf can be found at dilate function
             {
                 points.push_back(id.cast<double>().cwiseProduct(stepScale) + oc);
             }
@@ -224,6 +228,10 @@ namespace voxel_map
         {
             return ((pos - o) / scale).cast<int>();
         }
+
+        inline void resetVoxels() {
+			voxels = std::vector<uint8_t>(voxNum, Unoccupied);
+		}
     };
 }
 

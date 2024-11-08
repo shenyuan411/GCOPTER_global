@@ -23,7 +23,9 @@
 */
 
 #ifndef VOXEL_DILATER
-#define VOXEL_DILATER(i, j, k, x, y, z, sy, sz, bx, by, bz, ck, ogm, ofst, val, fdl)                                                                                                                                                      \
+// ck is a flag to boundary treatment
+//  VOXEL_DILATER(i, j, k, x, y, z, step(1),step(2),bounds(0), bounds(1), bounds(2),check, voxels, idx, Dilated, cvec) if voxels[idx]==0, then let it = Dilated, and emplace_back to fdl
+#define VOXEL_DILATER(i, j, k, x, y, z, sy, sz,     bx, by, bz,                    ck, ogm, ofst, val, fdl)                                                                                                                                            \
 (ck) = (x) == 0 || (x) == (bx) || (y) == 0 || (y) == (by) || (z) == 0 || (z) == (bz);                                                                                                                                                   \
 (i) = (x) - 1; (j) = (y) - (sy); (k) = (z) - (sz); (ofst) = (i) + (j) + (k); if ((!(ck) || ((ck) && (i) >= 0    && (j) >= 0      && (k) >= 0   )) && (ogm)[(ofst)] == 0) { (ogm)[(ofst)] = (val); (fdl).emplace_back((i), (j), (k)); }  \
 (i) = (x) - 1; (j) = (y) - (sy); (k) = (z);        (ofst) = (i) + (j) + (k); if ((!(ck) || ((ck) && (i) >= 0    && (j) >= 0                    )) && (ogm)[(ofst)] == 0) { (ogm)[(ofst)] = (val); (fdl).emplace_back((i), (j), (k)); }  \
