@@ -3,15 +3,15 @@ MapTopic:                   '/map_generator/global_cloud'
 
 TargetTopic:                '/move_base_simple/goal'
 
-DilateRadius:               0.5
+DilateRadius:               0.28
 
 VoxelWidth:                 0.25
 
-MapBound:                   [-25.0, 25.0, -25.0, 25.0, 0.0, 5.0]
+MapBound:                   [-25.0, 25.0, -25.0, 25.0, 0.1, 2.5]
 
-TimeoutRRT:                 0.02
+TimeoutRRT:                 2.2
 
-MaxVelMag:                  4.0
+MaxVelMag:                  2.0
 
 MaxBdrMag:                  2.1
 

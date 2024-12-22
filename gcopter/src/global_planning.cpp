@@ -11,6 +11,8 @@
 #include <geometry_msgs/Point.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
+#include "gcopter/PolyTraj.h"
+#include "gcopter/MINCOTraj.h"
 
 #include <cmath>
 #include <iostream>
@@ -80,6 +82,7 @@ private:
     ros::NodeHandle nh;
     ros::Subscriber mapSub;
     ros::Subscriber targetSub;
+	ros::Publisher trajPub, mincoPub;
 
     bool mapInitialized;
     voxel_map::VoxelMap voxelMap;
@@ -110,6 +113,9 @@ public:
 
         targetSub = nh.subscribe(config.targetTopic, 1, &GlobalPlanner::targetCallBack, this,
                                  ros::TransportHints().tcpNoDelay());
+
+        trajPub = nh.advertise<gcopter::PolyTraj>("/gcopter/traj", 100);
+        mincoPub = nh.advertise<gcopter::MINCOTraj>("/gcopter/minco", 100);
     }
 
     inline void mapCallBack(const sensor_msgs::PointCloud2::ConstPtr &msg)
@@ -231,6 +237,12 @@ public:
                 {
                     trajStamp = ros::Time::now().toSec();
                     visualizer.visualize(traj, route);
+                    // pub the traj to ros topic
+					gcopter::PolyTraj poly_msg;
+					gcopter::MINCOTraj minco_msg;
+					polyTraj2ROSMsg(poly_msg, minco_msg);
+                    trajPub.publish(poly_msg);
+                    mincoPub.publish(minco_msg);
                 }
             }
         }
@@ -262,6 +274,65 @@ public:
         }
         return;
     }
+
+    void polyTraj2ROSMsg(gcopter::PolyTraj &poly_msg, gcopter::MINCOTraj &MINCO_msg) {
+      int piece_num = traj.getPieceNum();
+      Eigen::VectorXd durs = traj.getDurations();
+      
+      poly_msg.drone_id = 0;
+      poly_msg.traj_id = 0;
+      poly_msg.start_time = ros::Time::now();
+      poly_msg.order = 5;
+      poly_msg.duration.resize(piece_num);
+      poly_msg.coef_x.resize(6 * piece_num);
+      poly_msg.coef_y.resize(6 * piece_num);
+      poly_msg.coef_z.resize(6 * piece_num);
+      for (int i = 0; i < piece_num; ++i) {
+        poly_msg.duration[i] = durs(i);
+
+        Eigen::Matrix<double, 3, 6> cMat = traj.getPiece(i).getCoeffMat();
+        int i6 = i * 6;
+        for (int j = 0; j < 6; j++) {
+          poly_msg.coef_x[i6 + j] = cMat(0, j);
+          poly_msg.coef_y[i6 + j] = cMat(1, j);
+          poly_msg.coef_z[i6 + j] = cMat(2, j);
+		}
+	  }
+
+		double dur = 0.0;
+		dur = traj.getTotalDuration();
+        MINCO_msg.drone_id = 0;
+		MINCO_msg.traj_id = 0;
+		MINCO_msg.start_time = poly_msg.start_time;
+		MINCO_msg.order = 5; // todo, only support order = 5 now.
+		MINCO_msg.duration.resize(piece_num);
+		MINCO_msg.des_clearance = 0.3;
+		Eigen::Vector3d vec;
+		vec = traj.getPos(0);
+		MINCO_msg.start_p[0] = vec(0), MINCO_msg.start_p[1] = vec(1), MINCO_msg.start_p[2] = vec(2);
+		vec = traj.getVel(0);
+		MINCO_msg.start_v[0] = vec(0), MINCO_msg.start_v[1] = vec(1), MINCO_msg.start_v[2] = vec(2);
+		vec = traj.getAcc(0);
+		MINCO_msg.start_a[0] = vec(0), MINCO_msg.start_a[1] = vec(1), MINCO_msg.start_a[2] = vec(2);
+		vec = traj.getPos(dur);
+		MINCO_msg.end_p[0] = vec(0), MINCO_msg.end_p[1] = vec(1), MINCO_msg.end_p[2] = vec(2);
+		vec = traj.getVel(dur);
+		MINCO_msg.end_v[0] = vec(0), MINCO_msg.end_v[1] = vec(1), MINCO_msg.end_v[2] = vec(2);
+		vec = traj.getAcc(dur);
+		MINCO_msg.end_a[0] = vec(0), MINCO_msg.end_a[1] = vec(1), MINCO_msg.end_a[2] = vec(2);
+		MINCO_msg.inner_x.resize(piece_num - 1);
+		MINCO_msg.inner_y.resize(piece_num - 1);
+		MINCO_msg.inner_z.resize(piece_num - 1);
+		Eigen::MatrixXd pos = traj.getPositions();
+		for (int i = 0; i < piece_num - 1; i++)
+		{
+		MINCO_msg.inner_x[i] = pos(0, i + 1);
+		MINCO_msg.inner_y[i] = pos(1, i + 1);
+		MINCO_msg.inner_z[i] = pos(2, i + 1);
+		}
+		for (int i = 0; i < piece_num; i++)
+		MINCO_msg.duration[i] = durs[i];
+	}
 
     inline void process()
     {

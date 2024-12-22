@@ -340,6 +340,11 @@ public:
         return pieces.size();
     }
 
+    inline Piece<D> getPiece(int i) const
+    {
+        return pieces[i];
+    }
+
     inline Eigen::VectorXd getDurations() const
     {
         int N = getPieceNum();

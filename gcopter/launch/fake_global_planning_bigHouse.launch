@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+   <!-- <node name="rviz_gcopter" pkg="rviz" type="rviz" output="screen"
+    args="-d $(find gcopter)/config/global_planning_inSTS_map_generation.rviz"> 
+  </node> -->
+  
+  <param name="path_sn" type="int" value="4"/> <!-- 1指sts小场景；2指special situation；3指bigHouse场景上部路线；4指bigHouse场景下部路线-->
+  <node pkg="gcopter" type="fake_global_planning" name="global_planning_node" output="screen">
+  <!-- <rosparam file="$(find gcopter)/config/global_planning.yaml" command="load" /> -->
+  </node>
+
+  <!-- <node pkg="tf" type="static_transform_publisher" name="world_odom_publisher_GCOPTER" args="0 0 0 0 0 0 world odom 100"/> -->
+
+</launch>
